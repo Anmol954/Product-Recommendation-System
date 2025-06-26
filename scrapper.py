@@ -5,7 +5,6 @@ from selenium.common.exceptions import NoSuchElementException
 import pandas as pd
 import time
 
-# 📌 Function to split product title into name & features
 def split_product_title(full_title):
     lower_title = full_title.lower()
 
@@ -28,11 +27,9 @@ def split_product_title(full_title):
 
     return product_name, product_features
 
-# 📌 Get product input from user
 search_term = input("Enter the product name to search on Amazon.in: ")
 max_pages = int(input("How many pages do you want to scrape?: "))
 
-# 📌 Set up headless Chrome options
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-gpu")
@@ -40,10 +37,8 @@ chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
-# 📌 Initialize WebDriver
 driver = webdriver.Chrome(options=chrome_options)
 
-# 📌 Build Amazon search URL
 search_query = search_term.replace(" ", "+")
 url = f"https://www.amazon.in/s?k={search_query}"
 
@@ -106,7 +101,6 @@ while page_num <= max_pages:
             "Image URL": image_url
         })
 
-    # 📌 Move to next page
     try:
         next_button = driver.find_element(By.CSS_SELECTOR, "a.s-pagination-next")
         if 'disabled' in next_button.get_attribute('class'):
@@ -122,11 +116,9 @@ while page_num <= max_pages:
 
 driver.quit()
 
-# 📌 Save results to CSV with utf-8-sig encoding to handle ₹ symbol properly
 df = pd.DataFrame(products)
 csv_file_path = f"{search_term.replace(' ', '_')}_amazon_scraped_products.csv"
 df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
 
-# 📌 Success message
 print(f"\n✅ Scraped {len(df)} products from {page_num} page(s) — saved to '{csv_file_path}' successfully!")
 print(df.head())
