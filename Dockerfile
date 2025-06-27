@@ -1,20 +1,17 @@
-FROM browserless/chrome:latest
-
-# Install Python and pip
-RUN apt-get update && apt-get install -y python3 python3-pip
+FROM mcr.microsoft.com/playwright:focal
 
 # Set work directory
 WORKDIR /app
 
-# Copy requirements and install
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your entire app folder
+# Copy your app files
 COPY . .
 
-# Expose Streamlit port
+# Expose port for Streamlit
 EXPOSE 8080
 
-# Command to run your Streamlit app
+# Run your Streamlit app
 CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8080", "--server.enableCORS=false"]
