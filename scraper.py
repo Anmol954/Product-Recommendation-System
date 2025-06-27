@@ -1,10 +1,11 @@
 import pandas as pd
+import time
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
-import time
-
+from webdriver_manager.chrome import ChromeDriverManager
 
 def split_product_title(full_title):
     lower_title = full_title.lower()
@@ -26,7 +27,6 @@ def split_product_title(full_title):
         product_features = " ".join(words[5:]) if len(words) > 5 else "N/A"
     return product_name, product_features
 
-
 def scrape_amazon_products(search_term, max_pages=1):
     chrome_options = Options()
     chrome_options.binary_location = "/usr/bin/google-chrome"
@@ -36,7 +36,8 @@ def scrape_amazon_products(search_term, max_pages=1):
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    driver = webdriver.Chrome(options=chrome_options)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
     search_query = search_term.replace(" ", "+")
     url = f"https://www.amazon.in/s?k={search_query}"
@@ -100,13 +101,11 @@ def scrape_amazon_products(search_term, max_pages=1):
             next_button = driver.find_element(By.CSS_SELECTOR, "a.s-pagination-next")
             if 'disabled' in next_button.get_attribute('class'):
                 break
-            else:
-                next_button.click()
-                time.sleep(2)
-                page_num += 1
+            next_button.click()
+            time.sleep(2)
+            page_num += 1
         except NoSuchElementException:
             break
 
     driver.quit()
-
     return pd.DataFrame(products)
