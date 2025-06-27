@@ -29,12 +29,12 @@ def split_product_title(full_title):
 
 def scrape_amazon_products(search_term, max_pages=1):
     chrome_options = Options()
+    chrome_options.binary_location = "/usr/bin/google-chrome"
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.binary_location = "/usr/bin/google-chrome"
 
     driver = webdriver.Chrome(options=chrome_options)
 
