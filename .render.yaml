@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: amazon-recommender
+    env: docker
+    plan: starter
+    autoDeploy: true
