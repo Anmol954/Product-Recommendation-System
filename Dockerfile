@@ -1,26 +1,25 @@
-# Use Python base image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    wget gnupg unzip curl \
-    chromium chromium-driver \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies for Chrome
+RUN apt-get update && \
+    apt-get install -y wget unzip curl gnupg && \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set Chrome binary location for Selenium
-ENV CHROME_BIN=/usr/bin/chromium
-ENV PATH="/usr/bin/chromium:${PATH}"
+# Set work directory
+WORKDIR /app
 
-# Install Python dependencies
+# Install Python packages
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your app
-COPY . /app
-WORKDIR /app
+# Copy project files
+COPY . .
 
-# Expose Streamlit port
-EXPOSE 8501
+# Expose port for Streamlit
+EXPOSE 8080
 
-# Run Streamlit
-CMD ["streamlit", "run", "streamlit_app.py"]
+# Run Streamlit app
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8080", "--server.enableCORS=false"]
