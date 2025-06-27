@@ -1,6 +1,5 @@
 import pandas as pd
 import time
-import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -30,10 +29,6 @@ def split_product_title(full_title):
 
 def scrape_amazon_products(search_term, max_pages=1):
     chrome_options = Options()
-
-    # Detect platform
-    chrome_options = Options()
-
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")

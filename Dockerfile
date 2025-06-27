@@ -1,17 +1,17 @@
 FROM mcr.microsoft.com/playwright:focal
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your app files
+# Copy app files
 COPY . .
 
-# Expose port for Streamlit
+# Expose Streamlit port
 EXPOSE 8080
 
-# Run your Streamlit app
+# Run the Streamlit app
 CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8080", "--server.enableCORS=false"]
