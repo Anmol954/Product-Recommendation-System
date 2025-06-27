@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+USER root
+
 # Install dependencies for Chrome
 RUN apt-get update && \
     apt-get install -y wget unzip curl gnupg && \
