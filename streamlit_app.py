@@ -1,103 +1,88 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os
-import glob
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
+from scraper import scrape_amazon_products  # your scraper function
 
-def get_latest_csv(folder_path):
-    list_of_files = glob.glob(os.path.join(folder_path, '*.csv'))
-    list_of_files = [f for f in list_of_files if os.path.getsize(f) > 0]
-    if not list_of_files:
-        return None
-    latest_file = max(list_of_files, key=os.path.getctime)
-    return latest_file
+# Set page config
+st.set_page_config(page_title="🛍️ Live Product Recommender", layout="wide")
 
-def load_and_prepare_data(file):
-    df = pd.read_csv(file)
-    df.rename(columns={"Price (â‚¹)": "Price", "Price (₹)": "Price"}, inplace=True)
+st.title("🛍️ Live Amazon Product Recommendation System")
 
-    required_columns = ['Product Name', 'Product Features', 'Price', 'Rating', 'Reviews']
-    for col in required_columns:
-        if col not in df.columns:
-            st.error(f"Missing required column: '{col}'")
-            st.stop()
+# User inputs
+product_input = st.text_input("🔍 Enter product keyword (e.g. 'Wireless Earphones')")
+max_pages = st.slider("📄 How many Amazon pages to scrape?", 1, 5, 2)
 
-    df['Price'] = df['Price'].replace('N/A', np.nan).astype(str).str.replace(',', '').astype(float)
+if st.button("🔎 Scrape and Recommend"):
+    if not product_input:
+        st.warning("Please enter a product keyword.")
+        st.stop()
+
+    with st.spinner("Scraping products from Amazon live..."):
+        df = scrape_amazon_products(product_input, max_pages=max_pages)
+
+    if df.empty:
+        st.error("No products found. Try a different search term.")
+        st.stop()
+
+    st.success(f"Scraped {len(df)} products.")
+
+    # Clean data
+    df['Price (₹)'] = df['Price (₹)'].replace('N/A', np.nan).astype(str).str.replace(',', '').astype(float)
     df['Rating'] = df['Rating'].replace('N/A', np.nan).astype(str).str.extract(r'([0-9.]+)').astype(float)
     df['Reviews'] = df['Reviews'].replace('N/A', '0').astype(str).str.replace(',', '').astype(float)
     df['Product Features'] = df['Product Features'].fillna('')
 
-    return df
-
-def generate_recommendations(df):
+    # Vectorize product features
     vectorizer = TfidfVectorizer(stop_words='english')
     features_tfidf = vectorizer.fit_transform(df['Product Features'])
     cos_sim = cosine_similarity(features_tfidf)
 
+    # Normalize numerical columns
     scaler = MinMaxScaler()
     df[['Price_norm', 'Rating_norm', 'Reviews_norm']] = scaler.fit_transform(
-        df[['Price', 'Rating', 'Reviews']].fillna(0)
+        df[['Price (₹)', 'Rating', 'Reviews']].fillna(0)
     )
 
-    final_score = (0.6 * cos_sim) + (0.2 * df['Rating_norm'].values[:, None]) + \
-                  (0.1 * df['Reviews_norm'].values[:, None]) - (0.1 * df['Price_norm'].values[:, None])
+    # Final weighted score
+    final_score = (0.6 * cos_sim) + \
+                  (0.2 * df['Rating_norm'].values[:, None]) + \
+                  (0.1 * df['Reviews_norm'].values[:, None]) - \
+                  (0.1 * df['Price_norm'].values[:, None])
 
-    return final_score
+    # Product list for dropdown
+    product_list = df['Product Name'].tolist()
+    selected_product = st.selectbox("Select a product to get recommendations:", product_list)
 
-def recommend_products(df, final_score, product_index, top_n=5):
-    scores = final_score[product_index]
-    recommended_indices = scores.argsort()[-top_n-1:-1][::-1]
-    recommended_df = df.iloc[recommended_indices][['Product Name', 'Product Features', 'Price', 'Rating', 'Reviews']]
-    recommended_df['Similarity Score'] = scores[recommended_indices]
-    return recommended_df
+    if selected_product:
+        product_index = df[df['Product Name'] == selected_product].index[0]
 
-st.title("🛍️ Product Recommendation System")
+        # Recommendations
+        scores = final_score[product_index]
+        recommended_indices = scores.argsort()[-6:-1][::-1]
 
-uploaded_file = st.file_uploader("Upload your product CSV file", type="csv")
+        recommendations = df.iloc[recommended_indices][
+            ['Product Name', 'Product Features', 'Price (₹)', 'Rating', 'Reviews']
+        ].copy()
 
-if uploaded_file:
-    df = load_and_prepare_data(uploaded_file)
-    filename = uploaded_file.name
-else:
-    st.info("No file uploaded. Trying to use the latest CSV from local folder.")
-    folder_path = '.'
-    latest_csv = get_latest_csv(folder_path)
-    if latest_csv:
-        df = load_and_prepare_data(latest_csv)
-        filename = os.path.basename(latest_csv)
-        st.success(f"Loaded local file: `{filename}`")
-    else:
-        st.error("No valid CSV found in local folder. Please upload a file.")
-        st.stop()
+        recommendations['Similarity Score'] = scores[recommended_indices]
+        recommendations['Price (₹)'] = recommendations['Price (₹)'].apply(
+            lambda x: f"₹{int(x):,}" if pd.notnull(x) and x != 0 else "N/A"
+        )
 
-if df.empty:
-    st.error("The loaded file has no data.")
-    st.stop()
+        st.subheader(f"📊 Top 5 similar recommendations for: {selected_product}")
+        st.dataframe(recommendations)
 
-final_score = generate_recommendations(df)
+        # Download button
+        csv = recommendations.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            "📥 Download Recommendations CSV",
+            csv,
+            f"recommendations_for_{selected_product}.csv",
+            "text/csv"
+        )
 
-product_list = df['Product Name'].tolist()
-selected_product = st.selectbox("Select a product to get recommendations:", product_list)
-
-product_index = df[df['Product Name'] == selected_product].index[0]
-
-st.subheader(f"Top 5 similar recommendations for: {selected_product}")
-recommendations = recommend_products(df, final_score, product_index, 5)
-
-recommendations['Price'] = recommendations['Price'].apply(lambda x: f"₹{int(x):,}" if pd.notnull(x) else "N/A")
-
-st.dataframe(recommendations)
-
-csv = recommendations.to_csv(index=False).encode('utf-8')
-st.download_button(
-    "Download Recommendations CSV",
-    csv,
-    f"recommendations_for_{selected_product}.csv",
-    "text/csv"
-)
-
-st.markdown("---")
-st.markdown("Made by Anmol")
+    st.markdown("---")
+    st.markdown("Made by Anmol 👌")
