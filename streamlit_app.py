@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
-from scrapper import scrape_amazon_products  # your scraper function
+from scraper import scrape_amazon_products  # your scraper function
 
 st.set_page_config(page_title="🛍️ Live Product Recommender", layout="wide")
 st.title("🛍️ Live Amazon Product Recommendation System")
