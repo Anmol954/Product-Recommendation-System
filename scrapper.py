@@ -1,3 +1,5 @@
+import os
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -49,7 +51,7 @@ products = []
 page_num = 1
 
 while page_num <= max_pages:
-    print(f"📖 Scraping page {page_num}...")
+    print(f"Scraping page {page_num}...")
 
     items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
 
@@ -104,21 +106,22 @@ while page_num <= max_pages:
     try:
         next_button = driver.find_element(By.CSS_SELECTOR, "a.s-pagination-next")
         if 'disabled' in next_button.get_attribute('class'):
-            print("🔚 No more pages.")
+            print("No more pages.")
             break
         else:
             next_button.click()
             time.sleep(3)
             page_num += 1
     except NoSuchElementException:
-        print("🔚 No 'Next' button. Stopping.")
+        print("No 'Next' button. Stopping.")
         break
 
-driver.quit()
 
+
+os.makedirs("data", exist_ok=True)
 df = pd.DataFrame(products)
-csv_file_path = f"{search_term.replace(' ', '_')}_amazon_scraped_products.csv"
+csv_file_path = os.path.join("data", f"{search_term.replace(' ', '_')}_amazon_scraped_products.csv")
 df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
 
-print(f"\n✅ Scraped {len(df)} products from {page_num} page(s) — saved to '{csv_file_path}' successfully!")
+print(f"\nScraped {len(df)} products from {page_num} page(s) — saved to '{csv_file_path}' successfully!")
 print(df.head())
